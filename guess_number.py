@@ -347,6 +347,106 @@ def show_hangman_game() -> None:
 
     st.write(st.session_state.hangman_message)
 
+CARDS = {
+    "AS": 11,
+    "2": 2,
+    "3": 3,
+    "4": 4,
+    "5": 5,
+    "6": 6,
+    "7": 7,
+    "8": 8,
+    "9": 9,
+    "10": 10,
+    "J": 10,
+    "Q": 10,
+    "K": 10,
+}
+
+
+def draw_card() -> str:
+    return random.choice(list(CARDS.keys()))
+
+
+def calculate_score(cards: list[str]) -> int:
+    score = sum(CARDS[card] for card in cards)
+
+    aces = cards.count("AS")
+
+    while score > 21 and aces > 0:
+        score -= 10
+        aces -= 1
+
+    return score
+
+
+def reset_blackjack_game() -> None:
+    st.session_state.player_cards = [draw_card(), draw_card()]
+    st.session_state.dealer_cards = [draw_card(), draw_card()]
+    st.session_state.blackjack_finished = False
+    st.session_state.blackjack_message = ""
+
+def show_blackjack_game() -> None:
+    st.header("🎴 Blackjack")
+
+    if "player_cards" not in st.session_state:
+        reset_blackjack_game()
+
+    if st.button("New Blackjack Game"):
+        reset_blackjack_game()
+
+    player_cards = st.session_state.player_cards
+    dealer_cards = st.session_state.dealer_cards
+
+    player_score = calculate_score(player_cards)
+    dealer_score = calculate_score(dealer_cards)
+
+    st.subheader("Your Cards")
+    st.write(player_cards)
+    st.write(f"Score: {player_score}")
+
+    st.subheader("Dealer")
+
+    if st.session_state.blackjack_finished:
+        st.write(dealer_cards)
+        st.write(f"Score: {dealer_score}")
+    else:
+        st.write([dealer_cards[0], "❓"])
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        if st.button("Hit") and not st.session_state.blackjack_finished:
+            player_cards.append(draw_card())
+            player_score = calculate_score(player_cards)
+
+            if player_score > 21:
+                st.session_state.blackjack_finished = True
+                st.session_state.blackjack_message = "💀 Bust! You lose."
+
+            st.rerun()
+
+    with col2:
+        if st.button("Stand") and not st.session_state.blackjack_finished:
+            while calculate_score(dealer_cards) < 17:
+                dealer_cards.append(draw_card())
+
+            dealer_score = calculate_score(dealer_cards)
+
+            st.session_state.blackjack_finished = True
+
+            if dealer_score > 21:
+                st.session_state.blackjack_message = "🎉 Dealer busts! You win."
+            elif dealer_score > player_score:
+                st.session_state.blackjack_message = "😢 Dealer wins."
+            elif dealer_score < player_score:
+                st.session_state.blackjack_message = "🎉 You win!"
+            else:
+                st.session_state.blackjack_message = "🤝 Draw."
+
+            st.rerun()
+
+    st.write(st.session_state.blackjack_message)
 
 def show_scores() -> None:
     st.header("🏆 Leaderboard")
@@ -395,12 +495,21 @@ def main() -> None:
 
     st.session_state.player_name = player_name
 
-    page = st.sidebar.radio("Choose a game", ["Guess the Number", "Hangman", "Scores"])
-
+    page = st.sidebar.radio(
+        "Choose a game",
+        [
+            "Guess the Number",
+            "Hangman",
+            "Blackjack",
+            "Scores",
+        ],
+    )
     if page == "Guess the Number":
         show_guess_game()
     elif page == "Hangman":
         show_hangman_game()
+    elif page == "Blackjack":
+        show_blackjack_game()
     elif page == "Scores":
         show_scores()
 
